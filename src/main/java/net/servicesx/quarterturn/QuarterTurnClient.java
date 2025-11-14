@@ -3,6 +3,7 @@ package net.servicesx.quarterturn;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.text.LiteralText;
 import org.lwjgl.input.Keyboard;
 
 import java.lang.reflect.Method;
@@ -15,7 +16,8 @@ public class QuarterTurnClient implements ClientModInitializer {
     private static final int KEY_RESET  = Keyboard.KEY_O;
 
     private static final int MAX_CORNERS = 4;
-    private static final float STEP_DEGREES = 6.2F;
+    private static final float STEP_DEGREES = 7.3F;
+    private static final int CORNER_HOLD_TICKS = 2;
 
     private static boolean togglePrev = false;
     private static boolean recordPrev = false;
@@ -69,6 +71,13 @@ public class QuarterTurnClient implements ClientModInitializer {
             attackCooldown = 0;
             if (enabled) {
                 currentCorner = 0;
+                if (cornerCount == 0) {
+                    sendChat(mc, "QuarterTurn enabled, but no corners set. Look somewhere and press P to set 1/" + MAX_CORNERS + ".");
+                } else {
+                    sendChat(mc, "QuarterTurn enabled. Rotating through " + cornerCount + "/" + MAX_CORNERS + " corners.");
+                }
+            } else {
+                sendChat(mc, "QuarterTurn disabled.");
             }
         }
         togglePrev = toggleNow;
@@ -81,7 +90,7 @@ public class QuarterTurnClient implements ClientModInitializer {
 
         boolean resetNow = Keyboard.isKeyDown(KEY_RESET);
         if (resetNow && !resetPrev) {
-            resetMacro();
+            resetMacro(mc);
         }
         resetPrev = resetNow;
     }
@@ -91,14 +100,17 @@ public class QuarterTurnClient implements ClientModInitializer {
             cornerYaw[cornerCount] = mc.player.yaw;
             cornerPitch[cornerCount] = mc.player.pitch;
             cornerCount++;
+            sendChat(mc, "QuarterTurn: corner " + cornerCount + "/" + MAX_CORNERS + " saved.");
         } else {
             cornerYaw[currentCorner] = mc.player.yaw;
             cornerPitch[currentCorner] = mc.player.pitch;
+            int displayIndex = currentCorner + 1;
             currentCorner = (currentCorner + 1) % MAX_CORNERS;
+            sendChat(mc, "QuarterTurn: corner " + displayIndex + "/" + MAX_CORNERS + " updated.");
         }
     }
 
-    private static void resetMacro() {
+    private static void resetMacro(MinecraftClient mc) {
         enabled = false;
         cornerCount = 0;
         currentCorner = 0;
@@ -107,14 +119,10 @@ public class QuarterTurnClient implements ClientModInitializer {
             cornerYaw[i] = 0.0F;
             cornerPitch[i] = 0.0F;
         }
+        sendChat(mc, "QuarterTurn reset. All corners cleared.");
     }
 
     private static void rotateTowardsNextCorner(MinecraftClient mc) {
-        if (attackCooldown > 0) {
-            attackCooldown--;
-            return;
-        }
-
         float targetYaw = cornerYaw[currentCorner];
         float targetPitch = cornerPitch[currentCorner];
 
@@ -130,10 +138,17 @@ public class QuarterTurnClient implements ClientModInitializer {
         if (yawDone && pitchDone) {
             mc.player.yaw = targetYaw;
             mc.player.pitch = targetPitch;
+
+            if (attackCooldown < CORNER_HOLD_TICKS) {
+                attackCooldown++;
+                return;
+            }
+
+            attackCooldown = 0;
             doAttack(mc);
-            attackCooldown = 2;
             currentCorner = (currentCorner + 1) % cornerCount;
         } else {
+            attackCooldown = 0;
             if (!yawDone) {
                 float stepYaw = clamp(dyaw, -STEP_DEGREES, STEP_DEGREES);
                 mc.player.yaw = yaw + stepYaw;
@@ -168,6 +183,12 @@ public class QuarterTurnClient implements ClientModInitializer {
                 keyOnTickMethod.invoke(null, key);
             } catch (Throwable ignored) {
             }
+        }
+    }
+
+    private static void sendChat(MinecraftClient mc, String message) {
+        if (mc.player != null) {
+            mc.player.sendMessage(new LiteralText(message));
         }
     }
 
