@@ -14,14 +14,17 @@ public class QuarterTurnClient implements ClientModInitializer {
     private static final int KEY_TOGGLE = Keyboard.KEY_R;
     private static final int KEY_RECORD = Keyboard.KEY_P;
     private static final int KEY_RESET  = Keyboard.KEY_O;
+    private static final int KEY_SPEED_UP = Keyboard.KEY_UP;
+    private static final int KEY_SPEED_DOWN = Keyboard.KEY_DOWN;
 
     private static final int MAX_CORNERS = 4;
-    private static final float STEP_DEGREES = 7.3F;
-    private static final int CORNER_HOLD_TICKS = 2;
+    private static final int CORNER_HOLD_TICKS = 0;
 
     private static boolean togglePrev = false;
     private static boolean recordPrev = false;
     private static boolean resetPrev  = false;
+    private static boolean speedUpPrev = false;
+    private static boolean speedDownPrev = false;
 
     private static final float[] cornerYaw = new float[MAX_CORNERS];
     private static final float[] cornerPitch = new float[MAX_CORNERS];
@@ -30,6 +33,8 @@ public class QuarterTurnClient implements ClientModInitializer {
 
     private static boolean enabled = false;
     private static int attackCooldown = 0;
+
+    private static float stepDegrees = 5.0F;
 
     private static Method keyOnTickMethod;
 
@@ -93,6 +98,26 @@ public class QuarterTurnClient implements ClientModInitializer {
             resetMacro(mc);
         }
         resetPrev = resetNow;
+
+        boolean speedUpNow = Keyboard.isKeyDown(KEY_SPEED_UP);
+        if (speedUpNow && !speedUpPrev) {
+            stepDegrees += 0.2F;
+            if (stepDegrees > 45.0F) {
+                stepDegrees = 45.0F;
+            }
+            sendChat(mc, "QuarterTurn speed: " + stepDegrees + " deg/tick.");
+        }
+        speedUpPrev = speedUpNow;
+
+        boolean speedDownNow = Keyboard.isKeyDown(KEY_SPEED_DOWN);
+        if (speedDownNow && !speedDownPrev) {
+            stepDegrees -= 0.2F;
+            if (stepDegrees < 1.0F) {
+                stepDegrees = 1.0F;
+            }
+            sendChat(mc, "QuarterTurn speed: " + stepDegrees + " deg/tick.");
+        }
+        speedDownPrev = speedDownNow;
     }
 
     private static void recordCorner(MinecraftClient mc) {
@@ -132,8 +157,8 @@ public class QuarterTurnClient implements ClientModInitializer {
         float dyaw = wrapDegrees(targetYaw - yaw);
         float dpitch = targetPitch - pitch;
 
-        boolean yawDone = Math.abs(dyaw) <= STEP_DEGREES;
-        boolean pitchDone = Math.abs(dpitch) <= STEP_DEGREES;
+        boolean yawDone = Math.abs(dyaw) <= stepDegrees;
+        boolean pitchDone = Math.abs(dpitch) <= stepDegrees;
 
         if (yawDone && pitchDone) {
             mc.player.yaw = targetYaw;
@@ -150,11 +175,11 @@ public class QuarterTurnClient implements ClientModInitializer {
         } else {
             attackCooldown = 0;
             if (!yawDone) {
-                float stepYaw = clamp(dyaw, -STEP_DEGREES, STEP_DEGREES);
+                float stepYaw = clamp(dyaw, -stepDegrees, stepDegrees);
                 mc.player.yaw = yaw + stepYaw;
             }
             if (!pitchDone) {
-                float stepPitch = clamp(dpitch, -STEP_DEGREES, STEP_DEGREES);
+                float stepPitch = clamp(dpitch, -stepDegrees, stepDegrees);
                 mc.player.pitch = pitch + stepPitch;
             }
         }
