@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "quarterturn",
+  "version": "${version}",
+  "name": "Quarter Turn Mod",
+  "description": "Adds a keybind that turns the player 90 degrees per press.",
+  "authors": ["FroostySnoowman"],
+  "environment": "client",
+
+  "entrypoints": {
+    "main": [
+      "net.servicesx.quarterturn.QuarterTurnMod"
+    ],
+    "client": [
+      "net.servicesx.quarterturn.QuarterTurnClient"
+    ]
+  },
+
+  "mixins": [],
+
+  "depends": {
+    "fabricloader": ">=0.7.4",
+    "minecraft": "1.8.9"
+  }
+}
