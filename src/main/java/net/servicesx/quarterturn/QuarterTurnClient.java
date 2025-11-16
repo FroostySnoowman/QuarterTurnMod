@@ -2,12 +2,12 @@ package net.servicesx.quarterturn;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.ClientPlayerEntity;
 import net.minecraft.text.LiteralText;
 import org.lwjgl.input.Keyboard;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 
 public class QuarterTurnClient implements ClientModInitializer {
 
@@ -35,8 +35,6 @@ public class QuarterTurnClient implements ClientModInitializer {
     private static int attackCooldown = 0;
 
     private static float stepDegrees = 5.0F;
-
-    private static Method keyOnTickMethod;
 
     @Override
     public void onInitializeClient() {
@@ -186,28 +184,16 @@ public class QuarterTurnClient implements ClientModInitializer {
     }
 
     private static void doAttack(MinecraftClient mc) {
-        if (mc.options == null) return;
-        if (keyOnTickMethod == null) {
-            try {
-                for (Method m : KeyBinding.class.getDeclaredMethods()) {
-                    if (Modifier.isStatic(m.getModifiers())
-                            && m.getParameterTypes().length == 1
-                            && m.getParameterTypes()[0] == int.class
-                            && m.getReturnType() == void.class) {
-                        m.setAccessible(true);
-                        keyOnTickMethod = m;
-                        break;
-                    }
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-        if (keyOnTickMethod != null) {
-            try {
-                int key = mc.options.attackKey.getCode();
-                keyOnTickMethod.invoke(null, key);
-            } catch (Throwable ignored) {
-            }
+        ClientPlayerEntity player = mc.player;
+        ClientPlayerInteractionManager interactionManager = mc.interactionManager;
+        if (player == null || interactionManager == null) return;
+
+        Entity target = mc.targetedEntity;
+
+        player.swingHand();
+
+        if (target != null) {
+            interactionManager.attackEntity(player, target);
         }
     }
 
